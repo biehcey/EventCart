@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: eventcart
+      POSTGRES_PASSWORD: eventcart123
+      POSTGRES_DB: eventcart_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eventcart-net
+
+  # Redis
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - eventcart-net
+
+  # Zookeeper (Kafka için gerekli)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - eventcart-net
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    ports:
+      - "9093:9093"
+    networks:
+      - eventcart-net
+
+  # (Opsiyonel) Spring Boot Uygulaması
+  app:
+    build: .
+    container_name: eventcart-app
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eventcart_db
+      SPRING_DATASOURCE_USERNAME: eventcart
+      SPRING_DATASOURCE_PASSWORD: eventcart123
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - eventcart-net
+
+volumes:
+  postgres_data:
+
+networks:
+  eventcart-net:
