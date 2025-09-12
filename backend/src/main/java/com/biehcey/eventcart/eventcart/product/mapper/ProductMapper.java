@@ -5,38 +5,24 @@ import com.biehcey.eventcart.eventcart.product.dto.ProductResponseDto;
 import com.biehcey.eventcart.eventcart.product.dto.UpdateProductDto;
 import com.biehcey.eventcart.eventcart.product.entity.Category;
 import com.biehcey.eventcart.eventcart.product.entity.Product;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.springframework.stereotype.Component;
 
-@Component
-public class ProductMapper {
+@Mapper(componentModel = "spring")
+public interface ProductMapper {
+    @Mapping(target = "name", source = "dto.name")
+    @Mapping(target = "category", source = "category")
+    @Mapping(target = "description", source = "dto.description")
+    @Mapping(target = "id", ignore = true)
+    Product toEntity(NewProductDto dto, Category category);
 
-    public Product toEntity(NewProductDto dto, Category category){
-        Product product = new Product();
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setCategory(category);
-        product.setStockQuantity(dto.getStockQuantity());
-        return product;
-    }
+    @Mapping(target = "categoryName", source = "category.name")
+    @Mapping(target = "owner", source = "owner.username")
+    ProductResponseDto toDto(Product product);
 
-    public ProductResponseDto toDto(Product product){
-        ProductResponseDto dto = new ProductResponseDto();
-        dto.setId(product.getId());
-        dto.setName(product.getName());
-        dto.setCategoryName(product.getCategory().getName());
-        dto.setPrice(product.getPrice());
-        dto.setCreatedAt(product.getCreatedAt());
-        dto.setUpdatedAt(product.getCreatedAt());
-        dto.setStockQuantity(product.getStockQuantity());
-        dto.setOwner(product.getOwner().getUsername());
-        return dto;
-    }
 
-    public void updateEntity(UpdateProductDto dto, Product product){
-        product.setPrice(dto.getPrice());
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setStockQuantity(dto.getStockQuantity());
-    }
+    void updateEntity(UpdateProductDto dto, @MappingTarget Product product);
+
 }

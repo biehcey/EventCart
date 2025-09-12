@@ -1,5 +1,6 @@
 package com.biehcey.eventcart.eventcart.product.helper;
 
+import com.biehcey.eventcart.eventcart.product.exception.CategoryAlreadyExistException;
 import com.biehcey.eventcart.eventcart.product.exception.CategoryNotFoundException;
 import com.biehcey.eventcart.eventcart.product.exception.ProductAlreadyExistException;
 import com.biehcey.eventcart.eventcart.product.exception.ProductNotFoundException;
@@ -54,6 +55,17 @@ public class ProductExceptionHandler {
     public ErrorMessage handleAllExceptions(Exception exception, WebRequest request){
         return new ErrorMessage(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                LocalDateTime.now(),
+                exception.getMessage(),
+                request.getDescription(false)
+        );
+    }
+
+    @ExceptionHandler(value = {CategoryAlreadyExistException.class})
+    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
+    public ErrorMessage categoryAlreadyExistException(Exception exception, WebRequest request){
+        return new ErrorMessage(
+                HttpStatus.BAD_REQUEST.value(),
                 LocalDateTime.now(),
                 exception.getMessage(),
                 request.getDescription(false)

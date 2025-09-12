@@ -5,6 +5,8 @@ import com.biehcey.eventcart.eventcart.product.dto.NewCategoryDto;
 import com.biehcey.eventcart.eventcart.product.entity.Category;
 import com.biehcey.eventcart.eventcart.product.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,8 +18,8 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/create")
-    public Category createCategory(@RequestBody NewCategoryDto dto){
-        return categoryService.createCategory(dto);
+    public ResponseEntity<CategoryResponseDto> createCategory(@RequestBody NewCategoryDto dto){
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.createCategory(dto));
     }
 
     @GetMapping("/all")

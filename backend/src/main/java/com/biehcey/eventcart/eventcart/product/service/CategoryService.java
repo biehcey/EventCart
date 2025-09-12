@@ -6,6 +6,7 @@ import com.biehcey.eventcart.eventcart.product.entity.Category;
 import com.biehcey.eventcart.eventcart.product.exception.CategoryAlreadyExistException;
 import com.biehcey.eventcart.eventcart.product.mapper.CategoryMapper;
 import com.biehcey.eventcart.eventcart.product.repository.CategoryRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,14 @@ import java.util.stream.Collectors;
 public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+
     @PreAuthorize("hasRole('ADMIN')")
-    public Category createCategory(NewCategoryDto dto){
+    @Transactional
+    public CategoryResponseDto createCategory(NewCategoryDto dto){
         isCategoryAlreadyPresent(dto.getName());
         Category category = categoryMapper.toEntity(dto);
-        return categoryRepository.save(category);
+        Category saved = categoryRepository.save(category);
+        return categoryMapper.toDto(saved);
     }
 
     public List<CategoryResponseDto> getAllCategories(){
