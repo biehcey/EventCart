@@ -15,6 +15,12 @@ import com.biehcey.eventcart.eventcart.product.repository.CategoryRepository;
 import com.biehcey.eventcart.eventcart.product.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +31,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@EnableCaching
 public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -45,6 +52,7 @@ public class ProductService {
         return productMapper.toDto(saved);
     }
 
+    @Cacheable("product")
     public ProductResponseDto getProductById(Long id) {
         Product product = productRepository.findById(id).orElseThrow(() ->
                 new ProductNotFoundException("Product not found by id: "+id));
@@ -73,16 +81,16 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-
-    public List<ProductResponseDto> getAllProducts(){
-        return productRepository.findAll().stream()
-                .map(productMapper::toDto).toList();
+    @Cacheable(value = "products", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
+    public Page<ProductResponseDto> getAllProducts(Pageable pageable){
+        return productRepository.findAll(pageable)
+                .map(productMapper::toDto);
     }
 
-
-    public List<ProductResponseDto> findByCategoryName(String categoryName){
-        return productRepository.findByCategory_NameIgnoreCase(categoryName)
-                        .stream().map(productMapper::toDto).toList();
+    @Cacheable(value = "category_products", key = "#name + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
+    public Page<ProductResponseDto> findByCategoryName(String name, Pageable pageable){
+        return productRepository.findByCategory_NameIgnoreCase(name, pageable)
+                        .map(productMapper::toDto);
     }
 
     public void validateProductName(String name){
