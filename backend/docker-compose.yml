@@ -4,7 +4,7 @@ services:
   # PostgreSQL
   postgres:
     image: postgres:15
-    container_name: postgres
+    container_name: eventcart-postgres
     environment:
       POSTGRES_USER: eventcart
       POSTGRES_PASSWORD: eventcart123
@@ -15,66 +15,139 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - eventcart-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventcart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Redis
   redis:
-    image: redis:7
-    container_name: redis
+    image: redis:7-alpine
+    container_name: eventcart-redis
     ports:
       - "6379:6379"
     networks:
       - eventcart-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
-  # Zookeeper (Kafka için gerekli)
+  # Zookeeper
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: eventcart-zookeeper
+    hostname: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
     ports:
       - "2181:2181"
     networks:
       - eventcart-net
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  # Kafka Broker
+  # Kafka
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: eventcart-kafka
+    hostname: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_LOG4J_ROOT_LOGLEVEL: INFO
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - eventcart-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Kafka UI (Opsiyonel - Kafka'yı yönetmek için)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: eventcart-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
     ports:
-      - "9093:9093"
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
       - eventcart-net
 
-  # (Opsiyonel) Spring Boot Uygulaması
+  # Spring Boot Uygulaması
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: eventcart-app
     depends_on:
-      - postgres
-      - redis
-      - kafka
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eventcart_db
-      SPRING_DATASOURCE_USERNAME: eventcart
-      SPRING_DATASOURCE_PASSWORD: eventcart123
-      SPRING_REDIS_HOST: redis
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eventcart_db
+      - SPRING_DATASOURCE_USERNAME=eventcart
+      - SPRING_DATASOURCE_PASSWORD=eventcart123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     ports:
       - "8080:8080"
     networks:
       - eventcart-net
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  kafka_data:
+    driver: local
 
 networks:
   eventcart-net:
+    driver: bridge
