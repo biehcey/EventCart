@@ -4,6 +4,7 @@ import com.biehcey.eventcart.eventcart.authentication.entity.SecureUser;
 import com.biehcey.eventcart.eventcart.authentication.entity.User;
 import com.biehcey.eventcart.eventcart.product.dto.NewProductDto;
 import com.biehcey.eventcart.eventcart.product.dto.ProductResponseDto;
+import com.biehcey.eventcart.eventcart.product.dto.RestPage;
 import com.biehcey.eventcart.eventcart.product.dto.UpdateProductDto;
 import com.biehcey.eventcart.eventcart.product.entity.Category;
 import com.biehcey.eventcart.eventcart.product.entity.Product;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -82,15 +84,15 @@ public class ProductService {
     }
 
     @Cacheable(value = "products", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
-    public Page<ProductResponseDto> getAllProducts(Pageable pageable){
-        return productRepository.findAll(pageable)
-                .map(productMapper::toDto);
+    public RestPage<ProductResponseDto> getAllProducts(Pageable pageable){
+        return new RestPage<>(productRepository.findAll(pageable)
+                .map(productMapper::toDto));
     }
 
     @Cacheable(value = "category_products", key = "#name + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
-    public Page<ProductResponseDto> findByCategoryName(String name, Pageable pageable){
-        return productRepository.findByCategory_NameIgnoreCase(name, pageable)
-                        .map(productMapper::toDto);
+    public RestPage<ProductResponseDto> findByCategoryName(String name, Pageable pageable){
+        return new RestPage<>(productRepository.findByCategory_NameIgnoreCase(name, pageable)
+                        .map(productMapper::toDto));
     }
 
     public void validateProductName(String name){
@@ -109,6 +111,10 @@ public class ProductService {
     private Category findCategory(String categoryName){
         return categoryRepository.findByNameIgnoreCase(categoryName)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryName));
+    }
+
+    private boolean isStockLow(Product product){
+        return product.getStockQuantity() <= 5;
     }
 
 }
