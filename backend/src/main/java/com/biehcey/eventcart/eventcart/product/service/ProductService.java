@@ -18,17 +18,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 
 
 @Service
@@ -38,6 +34,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
@@ -72,6 +69,9 @@ public class ProductService {
         Product product = findProductById(id);
         productMapper.updateEntity(dto, product);
         Product saved = productRepository.save(product);
+        if(isStockLow(saved)){
+            sendLowStockEvent(saved);
+        }
         return productMapper.toDto(saved);
     }
 
@@ -115,6 +115,10 @@ public class ProductService {
 
     private boolean isStockLow(Product product){
         return product.getStockQuantity() <= 5;
+    }
+
+    private void sendLowStockEvent(Product product){
+        kafkaTemplate.send("low-stock-topic", "low stock detected at " + product.getId() +" id");
     }
 
 }
