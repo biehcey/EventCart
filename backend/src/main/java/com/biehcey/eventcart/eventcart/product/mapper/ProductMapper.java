@@ -8,7 +8,6 @@ import com.biehcey.eventcart.eventcart.product.entity.Product;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
-import org.springframework.stereotype.Component;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
