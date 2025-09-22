@@ -10,7 +10,6 @@ spring:
     port: 6379
 
   kafka:
-    # SADECE bootstrap-servers kullanın - consumer/producer içinde tekrar belirtmeyin
     bootstrap-servers: localhost:29092
     consumer:
       group-id: eventcart-consumer-group
@@ -18,7 +17,6 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
-        # Connection timeout ayarları
         request.timeout.ms: 30000
         session.timeout.ms: 10000
         heartbeat.interval.ms: 3000
@@ -47,14 +45,11 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
-# Detaylı logging
-#logging:
-#  level:
-#    org.springframework.kafka: DEBUG
-#    org.apache.kafka: DEBUG
-#    org.apache.kafka.clients: DEBUG
-#    org.apache.kafka.common.network: DEBUG
-#    com.eventcart: DEBUG
+logging:
+  level:
+    org.apache.kafka: warn
+    kafka: warn
+    io.confluent: warn
 
 security:
   jwt:
