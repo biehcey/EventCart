@@ -16,7 +16,6 @@ public class NotificationService {
 
     @KafkaListener(topics = {"new-user-topic"}, groupId = "user-consumer-group")
     public void listenNewUserTopic(String message){
-
         logger.info("New user " + message);
     }
 }
