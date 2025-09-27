@@ -15,7 +15,7 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<CartDto> getCart(){
-        CartDto cart = cartService.getCart();
+        CartDto cart = cartService.getCartDto();
         return ResponseEntity.ok(cart);
     }
 
@@ -29,8 +29,8 @@ public class CartController {
 
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<CartDto> deleteProductFromCart(@PathVariable Long productId){
-        cartService.removeProductFromCart(productId);
-        CartDto updatedCart = cartService.getCart();
+        cartService.removeCartItemById(productId);
+        CartDto updatedCart = cartService.getCartDto();
         return ResponseEntity.ok(updatedCart);
     }
 }
