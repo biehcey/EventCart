@@ -14,11 +14,14 @@ import com.biehcey.eventcart.eventcart.product.exception.ProductNotFoundExceptio
 import com.biehcey.eventcart.eventcart.product.mapper.ProductMapper;
 import com.biehcey.eventcart.eventcart.product.repository.CategoryRepository;
 import com.biehcey.eventcart.eventcart.product.repository.ProductRepository;
+import com.biehcey.eventcart.eventcart.util.OrderCreatedDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.data.domain.Pageable;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @EnableCaching
@@ -93,6 +97,32 @@ public class ProductService {
     public RestPage<ProductResponseDto> findByCategoryName(String name, Pageable pageable){
         return new RestPage<>(productRepository.findByCategory_NameIgnoreCase(name, pageable)
                         .map(productMapper::toDto));
+    }
+
+    @KafkaListener(topics = {"order-created-topic-v2"}, groupId = "product-consumer-group-v2")
+    public void reduceStockAfterOrder(OrderCreatedDto orderCreatedEvent){
+        orderCreatedEvent.getStockUpdateDtos().forEach((stockUpdate) -> {
+            try{
+                decreaseProductQuantity(stockUpdate.getProductId(),
+                        stockUpdate.getQuantity()
+                );
+            }catch (RuntimeException e){
+                log.error("e: ", e);
+            }
+        });
+    }
+
+    @Transactional
+    public void decreaseProductQuantity(Long productId, int quantityToReduce){
+        Product product = findProductById(productId);
+        int currentStock = product.getStockQuantity();
+
+        if(quantityToReduce > currentStock){
+            throw new RuntimeException("Insufficient stock for product by id:" + productId);
+        }
+
+        product.setStockQuantity(currentStock - quantityToReduce);
+        productRepository.save(product);
     }
 
     public void validateProductName(String name){
