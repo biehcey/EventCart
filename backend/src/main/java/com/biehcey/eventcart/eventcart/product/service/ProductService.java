@@ -62,7 +62,7 @@ public class ProductService {
         return productMapper.toDto(product);
     }
 
-    private Product findProductById(Long id){
+    public Product findProductById(Long id){
         return productRepository.findById(id).orElseThrow(() ->
                 new ProductNotFoundException("Product not found by id: "+id));
     }
@@ -145,6 +145,12 @@ public class ProductService {
 
     private boolean isStockLow(Product product){
         return product.getStockQuantity() <= 5;
+    }
+
+    public void validateStockSufficient(Long productId, int quantity){
+        Product product = findProductById(productId);
+        if(product.getStockQuantity() >= quantity)
+            throw new RuntimeException("Not sufficient quantity!!");
     }
 
     private void sendLowStockEvent(Product product){
