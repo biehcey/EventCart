@@ -6,11 +6,9 @@ import com.biehcey.eventcart.eventcart.cart.mapper.CartMapper;
 import com.biehcey.eventcart.eventcart.cart.dto.CartDto;
 import com.biehcey.eventcart.eventcart.cart.entity.Cart;
 import com.biehcey.eventcart.eventcart.cart.entity.CartItem;
-import com.biehcey.eventcart.eventcart.cart.repository.CartItemRepository;
 import com.biehcey.eventcart.eventcart.cart.repository.CartRepository;
 import com.biehcey.eventcart.eventcart.product.entity.Product;
-import com.biehcey.eventcart.eventcart.product.exception.ProductNotFoundException;
-import com.biehcey.eventcart.eventcart.product.repository.ProductRepository;
+import com.biehcey.eventcart.eventcart.product.service.ProductService;
 import com.biehcey.eventcart.eventcart.util.OrderCreatedDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,16 +21,16 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class CartService {
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
+    private final ProductService productService;
     private final CartMapper cartMapper;
     private final UserService userService;
+    private final CartItemService cartItemService;
 
-    public CartDto getCart(){
-        return cartMapper.toDto(getOrCreateCartEntity());
+    public CartDto getCartDto(){
+        return cartMapper.toDto(findOrCreateCart());
     }
 
-    public Cart getOrCreateCartEntity(){
+    public Cart findOrCreateCart(){
         User currentUser = userService.getCurrentUser();
         return cartRepository.findByUser(currentUser).orElseGet(() -> {
             Cart cart = new Cart();
@@ -43,37 +41,20 @@ public class CartService {
     }
 
     public CartDto addProductToCart(Long productId, int quantity){
-        Cart cart = getOrCreateCartEntity();
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id:" + productId));
-        if(product.getStockQuantity() < quantity)
-            throw new RuntimeException("Not sufficient quantity!!");
-        CartItem cartItem = cartItemRepository.findByCartAndProduct(cart, product)
-                .orElseGet(() -> {
-                    CartItem newItem = new CartItem();
-                    newItem.setCart(cart);
-                    newItem.setProduct(product);
-                    return newItem;
-                });
-        cartItem.setQuantity(quantity);
-        cartItem.calculateSubTotal();
-
-        cartItemRepository.save(cartItem);
-
+        Cart cart = findOrCreateCart();
+        Product product = productService.findProductById(productId);
+        productService.validateStockSufficient(productId, quantity);
+        CartItem cartItem = cartItemService.saveOrUpdateCartItem(cart, product, quantity);
         cart.calculateTotalPrice();
         Cart updatedCart = cartRepository.save(cart);
         return cartMapper.toDto(updatedCart);
     }
 
 
-    public void removeProductFromCart(Long productId){
-        Cart cart = getOrCreateCartEntity();
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with id:" + productId));
-        cartItemRepository.findByCartAndProduct(cart, product).ifPresent(item -> {
-            cart.getItems().remove(item);
-            cartItemRepository.delete(item);
-        });
+    public void removeCartItemById(Long cartItemId){
+        Cart cart = findOrCreateCart();
+        CartItem removedItem = cartItemService.removeCartItemById(cartItemId);
+        cart.getItems().remove(removedItem);
         cart.calculateTotalPrice();
         cartRepository.save(cart);
     }
