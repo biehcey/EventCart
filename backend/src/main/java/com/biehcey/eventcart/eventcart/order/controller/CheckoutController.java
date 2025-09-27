@@ -1,6 +1,5 @@
 package com.biehcey.eventcart.eventcart.order.controller;
 
-import com.biehcey.eventcart.eventcart.cart.repository.CartRepository;
 import com.biehcey.eventcart.eventcart.order.dto.CheckoutResponseDto;
 import com.biehcey.eventcart.eventcart.order.entity.Order;
 import com.biehcey.eventcart.eventcart.order.mapper.CheckoutMapper;
@@ -18,11 +17,10 @@ public class CheckoutController {
     private final CheckoutService checkoutService;
     private final CheckoutMapper checkoutMapper;
 
-    @PostMapping("/{cartId}")
+    @PostMapping
     public ResponseEntity<CheckoutResponseDto> checkout(){
 
         Order order = checkoutService.checkout();
-
         CheckoutResponseDto responseDto = checkoutMapper.toCheckoutResponse(order);
         return ResponseEntity.ok(responseDto);
     }
