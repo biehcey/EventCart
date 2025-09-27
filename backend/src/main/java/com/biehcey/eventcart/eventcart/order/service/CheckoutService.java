@@ -22,7 +22,7 @@ public class CheckoutService {
     @Transactional
     public Order checkout(){
         User user = userService.getCurrentUser();
-        Cart cart = cartService.getOrCreateCartEntity();
+        Cart cart = cartService.findOrCreateCart();
         Order savedOrder = orderService.createOrderFromCart(user, cart);
         orderMessagingService.sendOrderCreatedEvent(cart, savedOrder);
         return savedOrder;

@@ -2,6 +2,7 @@ package com.biehcey.eventcart.eventcart.product.entity;
 
 import com.biehcey.eventcart.eventcart.authentication.entity.User;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -38,7 +39,7 @@ public class Product {
     private Category category;
 
     @Column(nullable = false)
-    @Positive(message = "Stock quantity must be positive")
+    @Min(value = 0, message = "Stock quantity cannot be negative")
     private Integer stockQuantity;
 
     @CreationTimestamp

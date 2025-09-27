@@ -149,7 +149,7 @@ public class ProductService {
 
     public void validateStockSufficient(Long productId, int quantity){
         Product product = findProductById(productId);
-        if(product.getStockQuantity() >= quantity)
+        if(product.getStockQuantity() < quantity)
             throw new RuntimeException("Not sufficient quantity!!");
     }
 
