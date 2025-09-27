@@ -15,15 +15,16 @@ spring:
       group-id: eventcart-consumer-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
+        spring.json.trusted.packages: com.biehcey.eventcart.eventcart.*
         request.timeout.ms: 30000
         session.timeout.ms: 10000
         heartbeat.interval.ms: 3000
         max.poll.interval.ms: 300000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: 1
       retries: 3
       properties:
