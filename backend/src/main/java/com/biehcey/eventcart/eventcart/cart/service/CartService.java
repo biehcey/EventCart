@@ -1,7 +1,7 @@
 package com.biehcey.eventcart.eventcart.cart.service;
 
-import com.biehcey.eventcart.eventcart.authentication.entity.SecureUser;
 import com.biehcey.eventcart.eventcart.authentication.entity.User;
+import com.biehcey.eventcart.eventcart.authentication.service.UserService;
 import com.biehcey.eventcart.eventcart.cart.mapper.CartMapper;
 import com.biehcey.eventcart.eventcart.cart.dto.CartDto;
 import com.biehcey.eventcart.eventcart.cart.entity.Cart;
@@ -15,8 +15,6 @@ import com.biehcey.eventcart.eventcart.util.OrderCreatedDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,12 +26,13 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final CartMapper cartMapper;
+    private final UserService userService;
 
     public CartDto getCart(){
         return cartMapper.toDto(getOrCreateCartEntity());
     }
     private Cart getOrCreateCartEntity(){
-        User currentUser = getCurrentUser();
+        User currentUser = userService.getCurrentUser();
         return cartRepository.findByUser(currentUser).orElseGet(() -> {
             Cart cart = new Cart();
             cart.setUser(currentUser);
@@ -86,11 +85,5 @@ public class CartService {
         cart.getItems().clear();
         cart.setTotalPrice(BigDecimal.ZERO);
         cartRepository.save(cart);
-    }
-
-    private User getCurrentUser(){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        SecureUser secureUser = (SecureUser) authentication.getPrincipal();
-        return secureUser.getUser();
     }
 }

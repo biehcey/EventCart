@@ -7,7 +7,6 @@ import com.biehcey.eventcart.eventcart.order.mapper.CheckoutMapper;
 import com.biehcey.eventcart.eventcart.order.service.CheckoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,13 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CheckoutController {
     private final CheckoutService checkoutService;
-    private final CartRepository cartRepository;
     private final CheckoutMapper checkoutMapper;
 
     @PostMapping("/{cartId}")
-    public ResponseEntity<CheckoutResponseDto> checkout(@PathVariable Long cartId){
+    public ResponseEntity<CheckoutResponseDto> checkout(){
 
-        Order order = checkoutService.checkout(cartId);
+        Order order = checkoutService.checkout();
 
         CheckoutResponseDto responseDto = checkoutMapper.toCheckoutResponse(order);
         return ResponseEntity.ok(responseDto);
