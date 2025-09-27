@@ -11,7 +11,10 @@ import com.biehcey.eventcart.eventcart.cart.repository.CartRepository;
 import com.biehcey.eventcart.eventcart.product.entity.Product;
 import com.biehcey.eventcart.eventcart.product.exception.ProductNotFoundException;
 import com.biehcey.eventcart.eventcart.product.repository.ProductRepository;
+import com.biehcey.eventcart.eventcart.util.OrderCreatedDto;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -72,6 +75,16 @@ public class CartService {
             cartItemRepository.delete(item);
         });
         cart.calculateTotalPrice();
+        cartRepository.save(cart);
+    }
+    @Transactional
+    @KafkaListener(topics = {"order-created-topic-v2"}, groupId = "cart-consumer-group-v2")
+    public void clearCartAfterOrder(OrderCreatedDto orderCreatedEvent){
+        Long cartId = orderCreatedEvent.getCartId();
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found with id:" + cartId));
+        cart.getItems().clear();
+        cart.setTotalPrice(BigDecimal.ZERO);
         cartRepository.save(cart);
     }
 
