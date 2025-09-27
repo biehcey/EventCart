@@ -31,7 +31,8 @@ public class CartService {
     public CartDto getCart(){
         return cartMapper.toDto(getOrCreateCartEntity());
     }
-    private Cart getOrCreateCartEntity(){
+
+    public Cart getOrCreateCartEntity(){
         User currentUser = userService.getCurrentUser();
         return cartRepository.findByUser(currentUser).orElseGet(() -> {
             Cart cart = new Cart();
